@@ -28,7 +28,7 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
 			->brandName('Rozetka Parser')
 			->brandLogo(asset('assets/filament/rozetka_parser_logo_cool.svg'))
-			->darkModeBrandLogo(asset('assets/filament/rozetka_parser_logo_cool_dark.svg'))
+			->darkModeBrandLogo(asset('assets/filament/rozetka_parser_logo_cool_dark_transparent.svg'))
 			->brandLogoHeight('36px')
 			->favicon(asset('assets/filament/favicon.ico'))
             ->login()
