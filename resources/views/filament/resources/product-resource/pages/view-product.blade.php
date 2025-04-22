@@ -9,13 +9,23 @@
                 <h2 class="text-xl font-bold">{{ $record->title }}</h2>
                 <p class="text-gray-500">{{ $record->category?->title }}</p>
                 <p class="text-lg font-semibold">{{ number_format($record->price,0,' ','&nbsp;') }} ₴</p>
-                <p>{!! $record->description !!}</p>
+                <p class="text-sm text-gray-500 mb-3">{{ $record->short_description }}</p>
+				<p>{!! $record->description !!}</p>
             </div>
             <div>
                 <img src="{{ $record->image_url }}" class="rounded-xl max-w-full"/>
             </div>
         </x-filament::grid>
     </x-filament::section>
+
+
+    <x-filament::section>
+        <h3 class="text-lg font-medium mb-4">Фото</h3>
+
+			@foreach($record->images as $src)
+				<img src="{{ $src }}" class="rounded-xl mb-2 max-w-full"/>
+			@endforeach
+	</x-filament::section>
 
     <x-filament::section>
         <h3 class="text-lg font-medium mb-4">Характеристики</h3>

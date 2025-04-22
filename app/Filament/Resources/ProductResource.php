@@ -37,6 +37,15 @@ class ProductResource extends Resource
                 TextColumn::make('updated_at')
                     ->label('Оновлено')
                     ->since(),
+				Tables\Columns\TextColumn::make('short_description')
+					->label('Короткий опис')
+					->limit(40),
+
+				Tables\Columns\TextColumn::make('created_at')
+					->label('Створено')
+					->dateTime(),					
+					
+					
             ])
             ->filters([
                 SelectFilter::make('category_id')

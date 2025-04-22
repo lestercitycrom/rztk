@@ -11,9 +11,14 @@ class Product extends Model
 		'parse_link_id', 'category_id',
 		'price', 'old_price', 'currency', 'in_stock', 'brand',
 		'image_url', 'description', 'last_detail_parsed_at',
+		'images','h1','meta_title','meta_description',
+		'meta_keywords','short_description',			
 	];
+	
+
 
 	protected $casts = [
+		'images'			 => 'array',	
 		'in_stock'			   => 'boolean',
 		'last_detail_parsed_at' => 'datetime',
 	];

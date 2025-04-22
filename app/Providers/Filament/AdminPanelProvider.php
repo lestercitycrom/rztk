@@ -26,7 +26,13 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
+			->brandName('Rozetka Parser')
+			->brandLogo(asset('assets/filament/rozetka_parser_logo_cool.svg'))
+			->darkModeBrandLogo(asset('assets/filament/rozetka_parser_logo_cool_dark.svg'))
+			->brandLogoHeight('36px')
+			->favicon(asset('assets/filament/favicon.ico'))
             ->login()
+			->profile()	
             ->colors([
                 'primary' => Color::Amber,
             ])
@@ -61,6 +67,8 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
-            ]);
+            ])
+			->topNavigation()      // ← включаем горизонтальное меню :contentReference[oaicite:0]{index=0}
+			;
     }
 }

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 36" width="300" height="36">
+  <rect width="100%" height="100%" fill="#1F2937"/>
+  <style>
+    text { font-family: "Montserrat", sans-serif; font-size: 28px; font-weight: bold; }
+  </style>
+  <!-- Green circle -->
+  <circle cx="18" cy="18" r="18" fill="#00C73C"/>
+  <!-- Left eye -->
+  <ellipse cx="12" cy="14" rx="2" ry="4" fill="#000"/>
+  <!-- Winking right eye (curve) -->
+  <path d="M24,14 C26,14 28,16 26,18" stroke="#000" stroke-width="2" fill="none"/>
+  <!-- Mouth -->
+  <path d="M8,24 Q18,32 28,24" stroke="#000" stroke-width="3" fill="none"/>
+  <!-- Text -->
+  <text x="45" y="25" fill="#FFF">ROZETKA PARSER</text>
+</svg>

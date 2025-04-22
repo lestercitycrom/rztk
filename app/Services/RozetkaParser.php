@@ -44,6 +44,14 @@ class RozetkaParser
 		$html	 = $response->body();
 		$crawler = new Crawler($html);
 
+		if (blank($link->title)) {
+			$link->meta_title		= trim($crawler->filter('title')->text(''));
+			$link->meta_description = trim($crawler->filter('meta[name=description]')->attr('content') ?? '');
+			$link->meta_keywords	= trim($crawler->filter('meta[name=keywords]')->attr('content') ?? '');
+			$link->h1				= trim($crawler->filter('h1')->text(''));
+		}
+
+
 		// store title once
 		if (blank($link->title)) $link->title = trim($crawler->filter('title')->text(''));
 
@@ -117,6 +125,8 @@ class RozetkaParser
 		$data = $this->decodeLinksInData($data);				// ← decode $hs$‑links
 		$info = $data['data'] ?? [];
 
+
+/*
 		$product->update([
 			'price'				 => (int)($info['price'] ?? $product->price),
 			'old_price'			 => (int)($info['old_price'] ?? 0),
@@ -127,6 +137,28 @@ class RozetkaParser
 			'in_stock'			 => ($info['sell_status'] ?? '') !== 'unavailable',
 			'last_detail_parsed_at' => now(),
 		]);
+*/
+
+		$product->update([
+			'price'		 => (int)($info['price'] ?? $product->price),
+			'old_price'	 => (int)($info['old_price'] ?? 0),
+			'currency'	 => 'UAH',
+			'brand'		 => $info['brand'] ?? $product->brand,
+			'images'	 => collect($info['images'] ?? [])
+				->pluck('original.url')->values()->all(),
+			'image_url'	 => $info['images'][0]['original']['url'] ?? $product->image_url,
+			'title'		 => $info['title'] ?? $product->title,
+			'h1'		 => $info['title'] ?? $product->h1,
+			'meta_title' => $info['seo']['Product']['name'] ?? null,
+			'meta_description' => $info['seo']['Product']['description'] ?? null,
+			'meta_keywords'		=> $info['seo']['Product']['offers']['availability'] ?? null,
+			'short_description' => $info['description']['text'] ?? null,
+			'description'		=> $info['description']['html'] ?? $product->description,
+			'in_stock'			=> ($info['sell_status'] ?? '') !== 'unavailable',
+			'last_detail_parsed_at' => now(),
+		]);
+
+
 
 		// category
 		if (isset($info['category_id'])) {
@@ -141,6 +173,12 @@ class RozetkaParser
 		}
 
 		/* ---------- characteristics ---------- */
+
+		if (isset($data['data']['attributesValues'])) {
+			foreach ($data['data']['attributesValues'] as $row) {
+				$this->upsertAttribute($product, $row['title'] ?? '', $row['value'] ?? '');
+			}
+		}
 
 		// JSON blob
 		if (isset($data['characteristics']) && is_array($data['characteristics'])) {
@@ -175,11 +213,15 @@ class RozetkaParser
 	private function decodeLinksInData($data)
 	{
 		if (is_string($data) && str_contains($data, '$hs$')) {
-			return str_replace(['$hs$', '$dt$', '$sh$'], ['https://', '.', '/'], $data);
+			return str_replace(
+				['$hs$','$ht$','$dt$','$sh$'],
+				['https://','http://','.','/'],
+				$data
+			);
 		}
-		if (is_array($data)) {
-			foreach ($data as $k => $v) $data[$k] = $this->decodeLinksInData($v);
-		}
+		if (is_array($data)) foreach ($data as $k=>$v)
+			$data[$k] = $this->decodeLinksInData($v);
 		return $data;
 	}
+
 }
