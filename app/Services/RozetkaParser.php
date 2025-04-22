@@ -44,13 +44,37 @@ class RozetkaParser
 		$html	 = $response->body();
 		$crawler = new Crawler($html);
 
+		/*
 		if (blank($link->title)) {
 			$link->meta_title		= trim($crawler->filter('title')->text(''));
 			$link->meta_description = trim($crawler->filter('meta[name=description]')->attr('content') ?? '');
 			$link->meta_keywords	= trim($crawler->filter('meta[name=keywords]')->attr('content') ?? '');
 			$link->h1				= trim($crawler->filter('h1')->text(''));
 		}
+		*/
+		
+		// ── meta & H1 ─────────────────────────────────────────
+		$meta = [
+			'h1'				=> trim($crawler->filter('h1')->text('')),
+			'meta_title'		=> trim($crawler->filter('title')->text('')),
+			'meta_description'	=> trim($crawler->filter('meta[name=description]')->attr('content') ?? ''),
+			'meta_keywords'		=> trim($crawler->filter('meta[name=keywords]')->attr('content') ?? ''),
+		];
 
+		$link->fill($meta);		//  ←  ВСЕГДА пишем в parse_links		
+		
+		if ($link->type === 'category') {               //  ←  новая ветка
+			// вытаскиваем id категории из URL
+			if (preg_match('/c(\d+)/', $link->url, $m)) {
+				$cat = Category::firstOrCreate(
+					['rozetka_id' => $m[1]],
+					['url' => $link->url]
+				);
+				$cat->fill($meta)->save();               // пишем ещё и в categories
+			}
+		}		
+		
+		
 
 		// store title once
 		if (blank($link->title)) $link->title = trim($crawler->filter('title')->text(''));
@@ -172,8 +196,21 @@ class RozetkaParser
 			$product->category()->associate($cat)->save();
 		}
 
+
+
+		// -------------- EXTRA ATTRIBUTES (config) --------------
+		$extra = config('rozetka.extra_attributes', []);
+		foreach ($extra as $jsonKey => $attrName) {
+			if (isset($info[$jsonKey]) && $info[$jsonKey] !== '') {
+				$this->upsertAttribute($product, $attrName, (string)$info[$jsonKey]);
+			}
+		}
+
+
 		/* ---------- characteristics ---------- */
 
+
+/*
 		if (isset($data['data']['attributesValues'])) {
 			foreach ($data['data']['attributesValues'] as $row) {
 				$this->upsertAttribute($product, $row['title'] ?? '', $row['value'] ?? '');
@@ -186,7 +223,7 @@ class RozetkaParser
 				$this->upsertAttribute($product, $row['name'] ?? '', $row['value'] ?? '');
 			}
 		}
-
+*/
 		// HTML fallback
 		$crawler = new Crawler($html);
 		$crawler->filter('.characteristics__list .characteristics__item')->each(
