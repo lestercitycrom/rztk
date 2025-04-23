@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Filament\Resources\ParseLinkResource\Pages;
 
 use App\Filament\Resources\ParseLinkResource;

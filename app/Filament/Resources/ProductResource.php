@@ -6,60 +6,58 @@ use App\Filament\Resources\ProductResource\Pages;
 use App\Models\Product;
 use Filament\Resources\Resource;
 use Filament\Tables;
-use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Actions\Action;
 
 class ProductResource extends Resource
 {
     protected static ?string $model = Product::class;
     protected static ?string $navigationGroup = 'Каталог';
     protected static ?string $navigationLabel = 'Товари';
-    protected static ?string $pluralLabel = 'Товари';
 
     public static function table(Tables\Table $table): Tables\Table
     {
         return $table
             ->columns([
-                TextColumn::make('rozetka_id')->label('ID')->sortable(),
                 TextColumn::make('title')
                     ->label('Назва')
-                    ->searchable()
-                    ->limit(50),
-                TextColumn::make('category.title')->label('Категорія'),
+                    ->limit(50)
+                    ->searchable(),
+
+                TextColumn::make('url')
+                    ->label('URL')
+                    ->url(fn (Product $record): string => $record->url)
+                    ->icon('heroicon-o-link')
+                    ->openUrlInNewTab(),
+
+                TextColumn::make('category_id')
+                    ->label('Категорія')
+                    ->formatStateUsing(fn (mixed $state, Product $record): string => 
+                        "c{$record->category_id} – {$record->category?->title}"
+                    ),
+
                 TextColumn::make('price')
                     ->label('Ціна')
-                    ->money('UAH', true)
-                    ->sortable(),
-                IconColumn::make('in_stock')
-                    ->label('Наявність')
-                    ->boolean(),
+                    ->money('UAH', true),
+
+                TextColumn::make('old_price')
+                    ->label('Стара ціна')
+                    ->money('UAH', true),
+
+                TextColumn::make('created_at')
+                    ->label('Створено')
+                    ->dateTime(),
+
                 TextColumn::make('updated_at')
                     ->label('Оновлено')
-                    ->since(),
-				Tables\Columns\TextColumn::make('short_description')
-					->label('Короткий опис')
-					->limit(40),
-
-				Tables\Columns\TextColumn::make('created_at')
-					->label('Створено')
-					->dateTime(),					
-					
-					
-            ])
-            ->filters([
-                SelectFilter::make('category_id')
-                    ->label('Категорія')
-                    ->relationship('category', 'title'),
+                    ->dateTime(),
             ])
             ->actions([
-                Tables\Actions\Action::make('view')
-                    ->label('Детально')
-                    ->icon('heroicon-o-eye')
-                    ->url(fn(Product $record) => ProductResource::getUrl('view', ['record' => $record])),
-            ])
-            ->headerActions([
-                Tables\Actions\ExportAction::make(),
+                Action::make('view')
+                    ->label('Детальніше')
+                    ->icon('heroicon-o-chevron-down')
+                    ->url(fn (Product $record): string => static::getUrl('view', ['record' => $record])),
             ]);
     }
 

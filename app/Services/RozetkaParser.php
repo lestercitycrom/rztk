@@ -1,11 +1,12 @@
 <?php
 namespace App\Services;
 
-use App\Models\{ParseLink, Product, Category, Attribute, ProductAttribute, Setting};
+use App\Models\{ParseLink, Product, Category, Attribute, ProductAttribute, Setting, ParseError};
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Symfony\Component\DomCrawler\Crawler;
+
 
 class RozetkaParser
 {
@@ -28,6 +29,11 @@ class RozetkaParser
 						'status_message' => $e->getMessage(),
 					]);
 					Log::error('Parse error', ['msg' => $e->getMessage(), 'url' => $link->url]);
+					ParseError::create([
+						'parse_link_id' => $link->id,
+						'stage'		   => 'category',
+						'message'	   => $e->getMessage(),
+					]);					
 				}
 			});
 	}
@@ -122,10 +128,21 @@ class RozetkaParser
 			->limit($limit)
 			->get()
 			->each(function (Product $p) use ($delay) {
-				$this->parseProduct($p);
+				try {
+					$this->parseProduct($p);
+				} catch (\Throwable $e) {
+
+					ParseError::create([
+						'parse_link_id' => $p->parse_link_id,
+						'stage'         => 'product',
+						'message'       => $e->getMessage(),
+					]);
+				}
 				usleep($delay * 1000);
 			});
 	}
+	
+	
 
 	/** Parse one product */
 	public function parseProduct(Product $product): void
@@ -149,33 +166,39 @@ class RozetkaParser
 		$data = $this->decodeLinksInData($data);				// ← decode $hs$‑links
 		$info = $data['data'] ?? [];
 
+		$crawler = new Crawler($html);
 
-/*
-		$product->update([
-			'price'				 => (int)($info['price'] ?? $product->price),
-			'old_price'			 => (int)($info['old_price'] ?? 0),
-			'currency'			 => 'UAH',
-			'brand'				 => $info['brand'] ?? $product->brand,
-			'image_url'			 => $info['images'][0]['original']['url'] ?? $product->image_url,
-			'description'		 => $info['description']['text'] ?? $product->description,
-			'in_stock'			 => ($info['sell_status'] ?? '') !== 'unavailable',
-			'last_detail_parsed_at' => now(),
-		]);
-*/
+
+		// ── Все URL изображений ────────────────────────────────
+		$images = collect($info['images'] ?? [])
+			->pluck('original.url')
+			->map(fn($u) => $this->decodeLinksInData($u))
+			->values()
+			->all();
+
 
 		$product->update([
 			'price'		 => (int)($info['price'] ?? $product->price),
 			'old_price'	 => (int)($info['old_price'] ?? 0),
 			'currency'	 => 'UAH',
 			'brand'		 => $info['brand'] ?? $product->brand,
+			
+	'images'		 => $images,
+	'image_url'		 => $images[0] ?? null,			
+			
+			/*
 			'images'	 => collect($info['images'] ?? [])
 				->pluck('original.url')->values()->all(),
 			'image_url'	 => $info['images'][0]['original']['url'] ?? $product->image_url,
+			*/
 			'title'		 => $info['title'] ?? $product->title,
 			'h1'		 => $info['title'] ?? $product->h1,
 			'meta_title' => $info['seo']['Product']['name'] ?? null,
-			'meta_description' => $info['seo']['Product']['description'] ?? null,
-			'meta_keywords'		=> $info['seo']['Product']['offers']['availability'] ?? null,
+			// 'meta_description' => $info['seo']['Product']['description'] ?? null,
+			
+			'meta_description' => trim($crawler->filter('meta[name=description]')->attr('content') ?? ''),
+			'meta_keywords'    => trim($crawler->filter('meta[name=keywords]')->attr('content') ?? ''),			
+			
 			'short_description' => $info['description']['text'] ?? null,
 			'description'		=> $info['description']['html'] ?? $product->description,
 			'in_stock'			=> ($info['sell_status'] ?? '') !== 'unavailable',
@@ -225,7 +248,7 @@ class RozetkaParser
 		}
 */
 		// HTML fallback
-		$crawler = new Crawler($html);
+		
 		$crawler->filter('.characteristics__list .characteristics__item')->each(
 			function (Crawler $li) use ($product) {
 				$name = trim($li->filter('.characteristics__label')->text(''));

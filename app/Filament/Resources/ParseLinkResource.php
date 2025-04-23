@@ -14,6 +14,8 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Toggle;
 
+use App\Filament\Resources\ParseLinkResource\RelationManagers\ErrorsRelationManager;
+
 class ParseLinkResource extends Resource
 {
     protected static ?string $model = ParseLink::class;
@@ -81,4 +83,11 @@ class ParseLinkResource extends Resource
             'edit'   => Pages\EditParseLink::route('/{record}/edit'),
         ];
     }
+	
+    public static function getRelations(): array
+    {
+        return [
+            ErrorsRelationManager::class,
+        ];
+    }	
 }

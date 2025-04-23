@@ -20,4 +20,6 @@ class ParseLink extends Model
 	{
 		return $this->hasMany(Product::class);
 	}
+	
+	public function errors() { return $this->hasMany(ParseError::class); }	
 }
