@@ -5,6 +5,6 @@ use Illuminate\Database\Eloquent\Model;
 
 class ParseError extends Model
 {
-	protected $fillable = ['parse_link_id','stage','message'];
+	protected $fillable = ['parse_link_id','stage','message', 'file', 'line',  ];
 	public function link() { return $this->belongsTo(ParseLink::class,'parse_link_id'); }
 }

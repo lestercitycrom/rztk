@@ -70,7 +70,7 @@ return [
     |
     */
 
-    'timezone' => 'UTC',
+    'timezone' => 'Europe/Kyiv',
 
     /*
     |--------------------------------------------------------------------------
@@ -169,7 +169,8 @@ return [
         App\Providers\EventServiceProvider::class,
         App\Providers\Filament\AdminPanelProvider::class,
         App\Providers\RouteServiceProvider::class,
-		App\Providers\Filament\FilamentServiceProvider::class,
+		//App\Providers\Filament\FilamentServiceProvider::class,
+		App\Providers\FilamentServiceProvider::class,
     ])->toArray(),
 
     /*

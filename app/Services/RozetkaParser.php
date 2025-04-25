@@ -1,7 +1,7 @@
 <?php
 namespace App\Services;
 
-use App\Models\{ParseLink, Product, Category, Attribute, ProductAttribute, Setting, ParseError};
+use App\Models\{ParseLink, Product, Category, Brand, Attribute, ProductAttribute, Setting, ParseError};
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -10,114 +10,131 @@ use Symfony\Component\DomCrawler\Crawler;
 
 class RozetkaParser
 {
-	/** Main scheduler entry */
+	
 	public function run(): void
 	{
-		$delay   = Setting::value('request_delay', 1000);		// ms
-		$details = Setting::value('details_per_category', 5);	// det. pages
+		$delay   = (int)Setting::value('request_delay', 1000);			// ms
+		$details = (int)Setting::value('details_per_category', 5);		// det.pages
+		$window  = (int)config('rozetka.runner_window', 50);		
 
-		ParseLink::where('is_active', true)
-			->orderBy('last_parsed_at')
-			->each(function (ParseLink $link) use ($delay, $details) {
-				try {
-					$this->parseCategoryPage($link);
-					usleep($delay * 1000);
-					$this->parseProductDetails($details, $delay);
-				} catch (\Throwable $e) {
-					$link->update([
-						'status'         => 'error',
-						'status_message' => $e->getMessage(),
-					]);
-					Log::error('Parse error', ['msg' => $e->getMessage(), 'url' => $link->url]);
-					ParseError::create([
-						'parse_link_id' => $link->id,
-						'stage'		   => 'category',
-						'message'	   => $e->getMessage(),
-					]);					
-				}
-			});
+		$started = microtime(true);										
+
+		while (microtime(true) - $started < $window) {			
+			// всегда берём самую голодную ссылку
+			$link = ParseLink::where('is_active', true)
+				->orderBy('last_parsed_at')
+				->first();
+
+			if (!$link) break;	// нет активных ссылок
+
+			try {
+				$this->parseCategoryPage($link);
+				usleep($delay * 1000);
+				$this->parseProductDetails($details, $delay);
+			} catch (\Throwable $e) {
+				$this->handleError($link,'category',$e);
+			}
+		}
 	}
-
-	/** Parse next page of category / seller */
+	
+	/**
+	 * Parse next page of category or seller link,
+	 * с универсальным JSON-фолбэком для плиток товаров.
+	 */
 	public function parseCategoryPage(ParseLink $link): void
 	{
 		$page = $link->last_parsed_page + 1;
-		$url  = $link->url . ($page > 1 ? (Str::contains($link->url, '?') ? '&' : '?') . "page={$page}" : '');
+		$url  = $link->url . ($page > 1 ? (Str::contains($link->url, '?') ? '&' : '?')."page={$page}" : '');
 
-		$response = Http::withHeaders(['User-Agent' => 'Mozilla/5.0'])->get($url);
-		if (!$response->ok()) throw new \Exception('HTTP ' . $response->status());
-
-		$html	 = $response->body();
+		$html = Http::withHeaders(['User-Agent' => 'Mozilla/5.0'])->get($url)->body();
 		$crawler = new Crawler($html);
 
-		/*
-		if (blank($link->title)) {
-			$link->meta_title		= trim($crawler->filter('title')->text(''));
-			$link->meta_description = trim($crawler->filter('meta[name=description]')->attr('content') ?? '');
-			$link->meta_keywords	= trim($crawler->filter('meta[name=keywords]')->attr('content') ?? '');
-			$link->h1				= trim($crawler->filter('h1')->text(''));
-		}
-		*/
-		
-		// ── meta & H1 ─────────────────────────────────────────
+		// meta
 		$meta = [
 			'h1'				=> trim($crawler->filter('h1')->text('')),
 			'meta_title'		=> trim($crawler->filter('title')->text('')),
+			'title'		=> trim($crawler->filter('title')->text('')),
 			'meta_description'	=> trim($crawler->filter('meta[name=description]')->attr('content') ?? ''),
 			'meta_keywords'		=> trim($crawler->filter('meta[name=keywords]')->attr('content') ?? ''),
 		];
+		$link->fill($meta);
 
-		$link->fill($meta);		//  ←  ВСЕГДА пишем в parse_links		
+		$data = $this->fetchRozetkaJson( $html );
+		$data = $this->decodeKeysAndValues( $data );
+
+		// === SEARCH FOR BLOCKS ===
+		$sellerData = $categoryData = $type = null;
 		
-		if ($link->type === 'category') {               //  ←  новая ветка
-			// вытаскиваем id категории из URL
-			if (preg_match('/c(\d+)/', $link->url, $m)) {
-				$cat = Category::firstOrCreate(
-					['rozetka_id' => $m[1]],
-					['url' => $link->url]
-				);
-				$cat->fill($meta)->save();               // пишем ещё и в categories
+		foreach ($data as $key => $item) {
+			// seller page block
+			if (strpos($key, 'G.https://search.rozetka/ua/seller/api/v7/') === 0) {
+				if (!isset($item['body'])) {
+					throw new \Exception('Seller block has no body');
+				}
+				$sellerData = json_decode($item['body'], true);
+				if (json_last_error() !== JSON_ERROR_NONE) {
+					throw new \Exception('Seller body JSON error: ' . json_last_error_msg());
+				}
+				
+				$type = 'vendor';
+				$goods = $sellerData["data"]["goods"];
+				
+				break;
 			}
-		}		
-		
-		
+			// category page block
+			if (strpos($key, 'G.https://xl-catalog-api.rozetka/v4/goods/getDetails') === 0) {
+				if (!isset($item['body'])) {
+					throw new \Exception('Category block has no body');
+				}
+				$categoryData = json_decode($item['body'], true);
+				if (json_last_error() !== JSON_ERROR_NONE) {
+					throw new \Exception('Category body JSON error: ' . json_last_error_msg());
+				}
+				
+				$type = 'category';
+				$goods = $categoryData["data"];
+				
+				break;
+			}
+		}
 
-		// store title once
-		if (blank($link->title)) $link->title = trim($crawler->filter('title')->text(''));
+		if ( is_null( $type )) throw new \Exception('Neither seller nor category block found');
 
-		// detect last page
-		$last = (int)$crawler->filter('ul.pagination__list li.pagination__item')->last()->text('');
-		$link->total_pages = max($last, 1);
+		$link->type = $type;
 
-		// tiles
-		$crawler->filter('.goods-tile')->each(function (Crawler $node) use ($link) {
-			$title = trim($node->filter('.goods-tile__title')->text(''));
-			$href  = $node->filter('.goods-tile__title')->closest('a')->attr('href');
-
-			preg_match('/p(\d+)\//', $href, $m);
-			$rid = $m[1] ?? null;
-			if (!$rid) return;
-
-			$price = (int)preg_replace('/\D/', '', $node->filter('.goods-tile__price-value')->text(''));
+		// сохраняем товары 
+		foreach ($goods as $g) {
 
 			Product::updateOrCreate(
-				['rozetka_id' => $rid],
+				['rozetka_id' => $g['id']],
 				[
-					'title'		   => $title,
-					'url'		   => $href,
+					'title'		   => $g['title'],
+					'url'		   => $g['href'],
 					'parse_link_id' => $link->id,
-					'price'		   => $price,
-					'in_stock'	   => Str::contains(Str::lower($node->text()), 'наяв'),
+					'price'		   => $g['price'] ?? 0,
+					'old_price'	   => $g['old_price'] ?? 0,
+					'image_url'	   => $g['image_main'] ?? null,
 				]
 			);
-		});
 
-		// update cursor
+			// бренд
+			if (!empty($g['brand_id'])) {
+				$brand = Brand::firstOrCreate(
+					['rozetka_id' => $g['brand_id']],
+					['name' => $g['brand']]
+				);
+				Product::where('rozetka_id',$g['id'])->update(['brand_id'=>$brand->id]);
+			}
+		}
+
+		$link->total_pages		= $this->getLastPageNumber($html);
 		$link->last_parsed_page = $page >= $link->total_pages ? 0 : $page;
 		$link->last_parsed_at	= now();
 		$link->status			= 'success';
+		$link->status_message			= '';
 		$link->save();
-	}
+
+	}	 
 
 	/** Detail pages */
 	public function parseProductDetails(int $limit, int $delay): void
@@ -131,12 +148,8 @@ class RozetkaParser
 				try {
 					$this->parseProduct($p);
 				} catch (\Throwable $e) {
-
-					ParseError::create([
-						'parse_link_id' => $p->parse_link_id,
-						'stage'         => 'product',
-						'message'       => $e->getMessage(),
-					]);
+					$this->handleError($p->parseLink,'product',$e);
+					
 				}
 				usleep($delay * 1000);
 			});
@@ -274,8 +287,8 @@ class RozetkaParser
 	{
 		if (is_string($data) && str_contains($data, '$hs$')) {
 			return str_replace(
-				['$hs$','$ht$','$dt$','$sh$'],
-				['https://','http://','.','/'],
+				['$hs$','$ht$','$dt$','$sh$', '$qr$'],
+				['https://','http://','.','/','/'],
 				$data
 			);
 		}
@@ -283,5 +296,102 @@ class RozetkaParser
 			$data[$k] = $this->decodeLinksInData($v);
 		return $data;
 	}
+
+	private function decodeLink(string $link): string {
+		$map = [
+			'$hs$' => 'https://',
+			'$ht$' => 'http://',
+			'$dt$' => '.',
+			'$sh$' => '/',
+			'$qr$' => '?',
+		];
+		return str_replace(array_keys($map), array_values($map), $link);
+	}
+
+
+	private function fetchRozetkaJson(string $html, string $scriptId = 'rz-client-state'): array {
+
+		$html = mb_convert_encoding($html, 'HTML-ENTITIES', 'UTF-8');
+
+		// parse DOM
+		libxml_use_internal_errors(true);
+		$dom   = new \DOMDocument();
+		$dom->loadHTML($html);
+		libxml_clear_errors();
+		$xpath = new \DOMXPath($dom);
+
+		// select only the script with given id
+		$node = $xpath->query("//script[@id='{$scriptId}']")->item(0);
+		if (!$node) {
+			throw new \Exception("Script with id=\"{$scriptId}\" not found");
+		}
+
+		// clean JSON
+		$jsonRaw = $node->textContent;
+		$jsonRaw = str_replace('&q;', '"', $jsonRaw);
+		$jsonRaw = html_entity_decode($jsonRaw, ENT_QUOTES | ENT_XML1, 'UTF-8');
+
+		// decode JSON
+		$data = json_decode($jsonRaw, true);
+		if (json_last_error() !== JSON_ERROR_NONE) {
+			throw new \Exception('JSON decode error: ' . json_last_error_msg());
+		}
+
+		return $data;
+	}
+
+
+	/**
+	 * Recursively decode keys & values in array.
+	 */
+	private function decodeKeysAndValues($data) {
+		if (!is_array($data)) {
+			return is_string($data) ? $this->decodeLink($data) : $data;
+		}
+		$result = [];
+		foreach ($data as $key => $value) {
+			$newKey = is_string($key) ? $this->decodeLink($key) : $key;
+			$result[$newKey] = $this->decodeKeysAndValues($value);
+		}
+		return $result;
+	}
+
+
+	/**
+	 * Find maximum page number in pagination links.
+	 */
+	private function getLastPageNumber(string $html): int {
+
+		if ( preg_match_all('#[/?]page=(\d+)[^>]+>\d+#', $html, $sub) ) {
+			return (int) $sub[1][ count($sub[1])-1 ];
+		} else return 0;		
+
+	}
+
+
+
+
+
+	private function handleError(ParseLink $link, string $stage, \Throwable $e): void
+	{
+		$link->update([
+			'status'		 => 'error',
+			'status_message' => $e->getMessage(),
+			'last_parsed_at'     => now(),
+		]);
+		
+		ParseError::create($data_error = [
+			'parse_link_id' => $link->id,
+			'stage'			=> $stage,
+			'message'		=> $e->getMessage(),
+			'file' => $e->getFile(),        
+			'line' => $e->getLine(),      
+		]);
+		
+		Log::error('Parse error', ['msg' => $e->getMessage(), 'url' => $link->url]);
+		var_dump( $data_error );
+		// exit();
+	}
+
 
 }

@@ -25,7 +25,7 @@ class AdminPanelProvider extends PanelProvider
         return $panel
             ->default()
             ->id('admin')
-            ->path('admin')
+            ->path('/')
 			->brandName('Rozetka Parser')
 			->brandLogo(asset('assets/filament/rozetka_parser_logo_cool.svg'))
 			->darkModeBrandLogo(asset('assets/filament/rozetka_parser_logo_cool_dark_transparent.svg'))
@@ -43,14 +43,19 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
-                Widgets\AccountWidget::class,
-                Widgets\FilamentInfoWidget::class,
-	
+                //Widgets\AccountWidget::class,
+                //Widgets\FilamentInfoWidget::class,
+				//\App\Filament\Widgets\ParsedLastMinute::class,
+				//\App\Filament\Widgets\ErrorsLastMinute::class,
+				
 				// добавляем виджеты на главную страницу	
-				\Filament\Widgets\AccountWidget::class,
-				\App\Filament\Widgets\Counters::class,
-				\App\Filament\Widgets\ParseLinksTable::class,
-				\App\Filament\Widgets\LogTail::class,	
+				//\Filament\Widgets\AccountWidget::class,
+				//\App\Filament\Widgets\Counters::class,
+				//\App\Filament\Widgets\ParseLinksTable::class,
+				// \App\Filament\Widgets\LogTail::class,	
+				//\App\Filament\Widgets\ParsingStats::class,
+
+
 
 	
             ])

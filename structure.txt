@@ -1,0 +1,101 @@
+.
+├── app
+│   ├── Console
+│   │   ├── Commands
+│   │   │   ├── RunParser.php
+│   │   │   │   Запускает полный цикл парсинга (категорий + деталей) — для cron/`schedule:run`.
+│   │   │   └── ParseLinkCommand.php
+│   │   │       Парсит сразу одну ссылку по её ID — для ручного запуска `php artisan rozetka:parse-link {id}`.
+│   │   └── Kernel.php
+│   │       Содержит метод `schedule()`, где расписано, что команда `rozetka:parse` вызывается каждую минуту.
+│   │
+│   ├── Models
+│   │   ├── ParseLink.php
+│   │   │   Eloquent-модель для таблицы `parse_links` (ссылки на категории/продавцов).
+│   │   ├── Product.php
+│   │   │   Модель для `products` (спарсенные товары).
+│   │   ├── Category.php
+│   │   │   Модель для `categories` (инфо по категориям).
+│   │   ├── Attribute.php
+│   │   │   Модель для `attributes` (список уникальных параметров).
+│   │   ├── ProductAttribute.php
+│   │   │   Pivot-модель между товарами и атрибутами (`product_attributes`).
+│   │   ├── Setting.php
+│   │   │   Модель для хранения общих настроек (`settings`).
+│   │   └── ParseError.php
+│   │       Модель для логов ошибок парсинга (`parse_errors`).
+│   │
+│   ├── Services
+│   │   └── RozetkaParser.php
+│   │       Вся логика парсинга: страницы категорий, детали товара, декодинг ссылок,
+│   │       запись meta-тегов, изображений, атрибутов, ошибок и т.п.
+│   │
+│   └── Filament
+│       ├── Widgets
+│       │   ├── Counters.php
+│       │   │   Виджет-счётчик (количество товаров/категорий) на дашборде.
+│       │   └── ParseLinksTable.php
+│       │       Табличный виджет с активными ссылками — опрашивается каждые 10 с.
+│       │
+│       └── Resources
+│           ├── ParseLinkResource.php
+│           │   Настройка Filament-ресурса для управления ссылками на парсинг.
+│           ├── ProductResource.php
+│           │   Ресурс для управления спарсенными товарами (список + детальный просмотр).
+│           │
+│           ├── RelationManagers
+│           │   └── ErrorsRelationManager.php
+│           │       RelationManager для `parse_errors` — показывает ошибки парсинга
+│           │       на странице редактирования конкретной ссылки.
+│           │
+│           └── Pages
+│               └── EditParseLink.php
+│                   Страница редактирования/просмотра `ParseLinkResource`
+│                   (подключает RelationManagers автоматически).
+│
+├── config
+│   └── rozetka.php
+│       Конфиг с массивом `extra_attributes` — список ключей из JSON,
+│       которые парсер сохраняет как дополнительные атрибуты.
+│
+
+│
+├── routes
+│   └── web.php
+│       Основные web-роуты, плюс маршрут
+│       `/cron/rozetka?key=…` для запуска парсера через wget/cURL.
+│
+├── resources
+│   └── views
+│       └── filament
+│           ├── resources
+│           │   ├── product-resource
+│           │   │   └── pages
+│           │   │       └── view-product.blade.php
+│           │   │           Детальный Blade-шаблон для просмотра товара.
+│           │   └── parse-link-resource
+│           │       └── pages
+│           │           └── edit-parse-link.blade.php (удаляется — используем базовый)
+│           └── pages
+│               └── parser-settings.blade.php
+│                   Настройки пауз, задержек и т.п. для парсера.
+│
+├── .env.example
+│   Шаблон настроек окружения (ключи DB, CRON_KEY и т.п.).
+│
+├── artisan
+│   Точка входа Laravel CLI.
+│
+├── composer.json / composer.lock
+│   PHP-зависимости проекта.
+│
+├── package.json / vite.config.js (или webpack.mix.js)
+│   Node.js-настройки для сборки фронтенд-ресурсов.
+│
+└── public
+    ├── index.php
+    ├── build / css / js / images
+    │   Статические ассеты (собираются `npm run build`).
+    └── .htaccess / web.config
+        Конфиг веб-сервера.
+

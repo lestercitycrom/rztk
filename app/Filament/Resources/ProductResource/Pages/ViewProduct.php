@@ -1,21 +1,19 @@
 <?php
+
 namespace App\Filament\Resources\ProductResource\Pages;
 
-use App\Filament\Resources\ProductResource;
 use Filament\Resources\Pages\ViewRecord;
+use App\Filament\Resources\ProductResource;
 
 class ViewProduct extends ViewRecord
 {
     protected static string $resource = ProductResource::class;
 
-
-    protected function getViewData(): array
+    // Показываем заголовок страницы = название товара
+    public function getTitle(): string
     {
-        return [
-            'product' => $this->record,
-        ];
+        return $this->record->title;
     }
-
 
     protected static string $view = 'filament.resources.product-resource.pages.view-product';
 }

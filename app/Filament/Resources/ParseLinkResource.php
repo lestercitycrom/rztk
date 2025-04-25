@@ -31,13 +31,6 @@ class ParseLinkResource extends Resource
                     ->label('URL')
                     ->required()
                     ->columnSpanFull(),
-                Select::make('type')
-                    ->label('Тип')
-                    ->options([
-                        'category' => 'Категорія',
-                        'vendor'   => 'Продавець',
-                    ])
-                    ->required(),
                 Toggle::make('is_active')
                     ->label('Активний')
                     ->default(true),
