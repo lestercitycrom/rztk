@@ -13,6 +13,9 @@ class FilamentServiceProvider extends ServiceProvider
 {
 	public function boot(): void
 	{
+		
+	
+		
 		Filament::serving(function (ServingFilament $event): void {
 			// Inject Tailwind Play CDN + config into EVERY Filament page <head>
 			FilamentView::registerRenderHook(

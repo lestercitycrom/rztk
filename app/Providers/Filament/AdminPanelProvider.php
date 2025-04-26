@@ -2,78 +2,69 @@
 
 namespace App\Providers\Filament;
 
-use Filament\Http\Middleware\Authenticate;
-use Filament\Http\Middleware\AuthenticateSession;
-use Filament\Http\Middleware\DisableBladeIconComponents;
-use Filament\Http\Middleware\DispatchServingFilamentEvent;
-use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
-use Filament\Widgets;
-use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
-use Illuminate\Cookie\Middleware\EncryptCookies;
-use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
-use Illuminate\Routing\Middleware\SubstituteBindings;
+use Filament\Http\Middleware\{
+	Authenticate,
+	AuthenticateSession,
+	DisableBladeIconComponents,
+	DispatchServingFilamentEvent
+};
+use Illuminate\Cookie\Middleware\{
+	EncryptCookies,
+	AddQueuedCookiesToResponse
+};
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
+use Illuminate\Routing\Middleware\SubstituteBindings;
 
 class AdminPanelProvider extends PanelProvider
 {
-    public function panel(Panel $panel): Panel
-    {
-        return $panel
-            ->default()
-            ->id('admin')
-            ->path('/')
+	public function panel(Panel $panel): Panel
+	{
+		return $panel
+			->default()
+			->id('admin')
+			->path('/')                                   // dashboard on "/"
 			->brandName('Rozetka Parser')
 			->brandLogo(asset('assets/filament/rozetka_parser_logo_cool.svg'))
 			->darkModeBrandLogo(asset('assets/filament/rozetka_parser_logo_cool_dark_transparent.svg'))
 			->brandLogoHeight('36px')
 			->favicon(asset('assets/filament/favicon.ico'))
-            ->login()
-			->profile()	
-            ->colors([
-                'primary' => Color::Amber,
-            ])
-            ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
-            ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
-            ->pages([
-                Pages\Dashboard::class,
-            ])
-            ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
-            ->widgets([
-                //Widgets\AccountWidget::class,
-                //Widgets\FilamentInfoWidget::class,
-				//\App\Filament\Widgets\ParsedLastMinute::class,
-				//\App\Filament\Widgets\ErrorsLastMinute::class,
-				
-				// добавляем виджеты на главную страницу	
-				//\Filament\Widgets\AccountWidget::class,
-				//\App\Filament\Widgets\Counters::class,
-				//\App\Filament\Widgets\ParseLinksTable::class,
-				// \App\Filament\Widgets\LogTail::class,	
-				//\App\Filament\Widgets\ParsingStats::class,
-
-
-
-	
-            ])
-            ->middleware([
-                EncryptCookies::class,
-                AddQueuedCookiesToResponse::class,
-                StartSession::class,
-                AuthenticateSession::class,
-                ShareErrorsFromSession::class,
-                VerifyCsrfToken::class,
-                SubstituteBindings::class,
-                DisableBladeIconComponents::class,
-                DispatchServingFilamentEvent::class,
-            ])
-            ->authMiddleware([
-                Authenticate::class,
-            ])
-			->topNavigation()      // ← включаем горизонтальное меню :contentReference[oaicite:0]{index=0}
-			;
-    }
+			->colors(['primary' => Color::Amber])
+			->login()
+			->profile()
+			->discoverResources(
+				app_path('Filament/Resources'),
+				'App\\Filament\\Resources'
+			)
+			->discoverPages(
+				app_path('Filament/Pages'),
+				'App\\Filament\\Pages'
+			)
+			->discoverWidgets(                             // register widgets
+				app_path('Filament/Widgets'),
+				'App\\Filament\\Widgets'
+			)
+			->pages([
+				\App\Filament\Pages\Dashboard::class,    // our dashboard page
+			])
+			->middleware([
+				EncryptCookies::class,
+				AddQueuedCookiesToResponse::class,
+				StartSession::class,
+				AuthenticateSession::class,
+				ShareErrorsFromSession::class,
+				VerifyCsrfToken::class,
+				SubstituteBindings::class,
+				DisableBladeIconComponents::class,
+				DispatchServingFilamentEvent::class,
+			])
+			->authMiddleware([
+				Authenticate::class,
+			])
+			->topNavigation();                            // use top nav
+	}
 }

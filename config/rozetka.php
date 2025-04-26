@@ -8,19 +8,26 @@ return [
 	|------------------------------------------------------------------
 	*/
 	'extra_attributes' => [
-		'seller_id'        => 'Seller ID',
-		'producer_id'      => 'Producer ID',
-		'state'            => 'Condition',
-		'discount'         => 'Discount (%)',
-		'comments_amount'  => 'Reviews',
+		'seller_id'       => 'Seller ID',
+		'producer_id'     => 'Producer ID',
+		'state'           => 'Condition',
+		'discount'        => 'Discount (%)',
+		'comments_amount' => 'Reviews',
 	],
 
 	/*
 	|------------------------------------------------------------------
-	|  Временное окно, в течение которого парсер работает при одном
-	|  запуске cron-job’а (секунд). 50 сек оставляет 10 сек запас.
+	|  Временное окно работы парсера (сек)
 	|------------------------------------------------------------------
 	*/
-	'runner_window' => 50,
+	'runner_window' => 5,
+
+	/*
+	|------------------------------------------------------------------
+	|  Интервал опроса (polling) виджетов Dashboard
+	|  Формат: '10s', '30s', '1m' и т.д.
+	|------------------------------------------------------------------
+	*/
+	'dashboard_polling_interval' => env('DASHBOARD_POLLING_INTERVAL', '10s'),
 
 ];
