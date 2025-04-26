@@ -1,39 +1,66 @@
 <?php
+
 namespace App\Filament\Pages;
 
 use App\Models\Setting;
-use Filament\Forms;
 use Filament\Pages\Page;
+use Filament\Forms\Concerns\InteractsWithForms;
+use Filament\Forms\Contracts\HasForms;
+use Filament\Forms\Form;
+use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 
-class ParserSettings extends Page implements Forms\Contracts\HasForms
+class ParserSettings extends Page implements HasForms
 {
-    use Forms\Concerns\InteractsWithForms;
+	use InteractsWithForms;
 
-    protected static ?string $navigationGroup = 'Парсер Rozetka';
-    protected static ?string $navigationLabel = 'Налаштування';
-    protected static string $view = 'filament.pages.parser-settings';
+	// sidebar group
+	//protected static ?string $navigationGroup = 'Парсер Rozetka';
+	// sidebar label
+	protected static ?string $navigationLabel = 'Налаштування';
+	// sidebar icon
+	protected static ?string $navigationIcon = 'heroicon-o-cog';
+	// page title
+	protected static ?string $title           = 'Налаштування';
+	// blade view path
+	protected static string  $view            = 'filament.pages.parser-settings';
 
-    public ?array $data = [];
+	public array $data = [];
 
-    public function mount(): void
-    {
-        $this->form->fill(Setting::firstOrFail()->toArray());
-    }
+	public function mount(): void
+	{
+		$settings = Setting::firstOrFail();
+		$this->data = $settings->toArray();
+		$this->form->fill($this->data);
+	}
 
-    protected function getFormSchema(): array
-    {
-        return [
-            Forms\Components\TextInput::make('request_delay')->label('Затримка (мс)')
-                ->numeric()->required()->minValue(100),
-            Forms\Components\TextInput::make('details_per_category')->label('Детальних запитів')
-                ->numeric()->required()->minValue(1),
-        ];
-    }
+	public function form(Form $form): Form
+	{
+		return $form
+			->schema([
+				TextInput::make('request_delay')
+					->label('Затримка (мс)')
+					->numeric()
+					->required()
+					->minValue(100),
+				TextInput::make('details_per_category')
+					->label('Детальних запитів')
+					->numeric()
+					->required()
+					->minValue(1),
+			])
+			->statePath('data');
+	}
 
-    public function submit(): void
-    {
-        $data = $this->form->getState();
-        Setting::first()->update($data);
-        $this->notify('success','Налаштування збережено');
-    }
+	public function submit(): void
+	{
+		Setting::first()->update($this->data);
+
+		Notification::make()
+			->success()
+			->title('Налаштування збережено')
+			->send();
+
+		$this->form->fill($this->data);
+	}
 }

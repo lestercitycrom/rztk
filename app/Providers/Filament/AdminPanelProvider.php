@@ -20,14 +20,21 @@ use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 
+// Custom menu
+use Filament\Navigation\NavigationBuilder;
+use Filament\Navigation\NavigationItem;
+
 class AdminPanelProvider extends PanelProvider
 {
+	
+	
+	
 	public function panel(Panel $panel): Panel
 	{
 		return $panel
 			->default()
 			->id('admin')
-			->path('/')                                   // dashboard on "/"
+			->path('')                                  
 			->brandName('Rozetka Parser')
 			->brandLogo(asset('assets/filament/rozetka_parser_logo_cool.svg'))
 			->darkModeBrandLogo(asset('assets/filament/rozetka_parser_logo_cool_dark_transparent.svg'))
@@ -65,6 +72,27 @@ class AdminPanelProvider extends PanelProvider
 			->authMiddleware([
 				Authenticate::class,
 			])
-			->topNavigation();                            // use top nav
+			->unsavedChangesAlerts()
+			->spa()
+			->topNavigation()                            // use top nav
+			
+			/*
+            ->navigation(function (NavigationBuilder $builder): NavigationBuilder {
+                return $builder->items([
+                    NavigationItem::make('Главная')
+                        ->icon('heroicon-o-home')
+                        ->isActiveWhen(fn (): bool => request()->is('/'))
+                        ->url('/'),
+
+                  
+                    // Автоматически сгенерированные элементы
+                    ...\App\Filament\Pages\Dashboard::getNavigationItems(),
+					...\App\Filament\Pages\ParserSettings::getNavigationItems(),
+
+
+                ]);
+            });
+			*/
+			;			
 	}
 }

@@ -11,84 +11,78 @@ use App\Models\ParseError;
 
 class ParseChart extends ChartWidget
 {
-	// widget heading
-	protected static ?string $heading = 'Успешные и неуспешные парсинги';
+    protected static ?string $heading = 'Динаміка парсингу';
+    protected int | string | array $columnSpan = 'full';
+    public bool $lazy = false;
+    public ?string $filter = 'hour';
 
-	// default filter
-	public ?string $filter = 'hour';
+    protected function getPollingInterval(): ?string
+    {
+        return config('rozetka.dashboard_polling_interval');
+    }
 
-	// polling interval from config/rozetka.php
-	protected function getPollingInterval(): ?string
-	{
-		return config('rozetka.dashboard_polling_interval', '10s');
-	}
+    protected function getFilters(): ?array
+    {
+        return [
+            'hour' => 'Остання година',
+            'day'  => 'Останні 24 г',
+            'week' => 'Останні 7 дн',
+        ];
+    }
 
-	// filter options
-	protected function getFilters(): ?array
-	{
-		return [
-			'hour' => 'Последний час',
-			'day'  => 'Последние 24 ч',
-		];
-	}
+    protected function getType(): string
+    {
+        return 'line';
+    }
 
-	// chart type
-	protected function getType(): string
-	{
-		return 'line';
-	}
+    protected function getContainerAttributes(): array
+    {
+        return ['style' => 'width:100%; height:900px;'];
+    }
 
-	// build dataset
-	protected function getData(): array
-	{
-		$end = Carbon::now();
+    protected function getOptions(): array
+    {
+        return [
+            'maintainAspectRatio' => false,
+            'spanGaps'            => false,
+            'elements'            => [
+                'line'  => ['borderWidth' => 2, 'tension' => 0.4, 'fill' => false],
+                'point' => ['radius' => 3],
+            ],
+            'scales' => ['y' => ['beginAtZero' => true]],
+        ];
+    }
 
-		if ($this->filter === 'hour') {
-			$start = Carbon::now()->subHour();
+    protected function getData(): array
+    {
+        $end = now();
+        [$start, $method, $fmt] = match ($this->filter) {
+            'hour' => [$end->copy()->subHour(),   'perMinute', 'H:i'],
+            'day'  => [$end->copy()->subDay(),    'perHour',   'd M H:00'],
+            default=> [$end->copy()->subDays(7),  'perDay',    'd M'],
+        };
 
-			$successTrend = Trend::model(Product::class)
-				->between(start: $start, end: $end)
-				->perMinute()
-				->count();
+        $ok  = Trend::model(Product::class)->between(start: $start, end: $end)->{$method}()->count();
+        $bad = Trend::model(ParseError::class)->between(start: $start, end: $end)->{$method}()->count();
 
-			$errorTrend = Trend::model(ParseError::class)
-				->between(start: $start, end: $end)
-				->perMinute()
-				->count();
+        $labels  = $ok->map(fn (TrendValue $v) => Carbon::parse($v->date)->format($fmt));
 
-			$labels = $successTrend->map(fn (TrendValue $v) => Carbon::parse($v->date)->format('H:i'));
-			$success = $successTrend->map(fn (TrendValue $v) => $v->aggregate);
-			$errors  = $errorTrend->map(fn (TrendValue $v) => $v->aggregate);
-		} else {
-			$start = Carbon::now()->subDay();
-
-			$successTrend = Trend::model(Product::class)
-				->between(start: $start, end: $end)
-				->perHour()
-				->count();
-
-			$errorTrend = Trend::model(ParseError::class)
-				->between(start: $start, end: $end)
-				->perHour()
-				->count();
-
-			$labels = $successTrend->map(fn (TrendValue $v) => Carbon::parse($v->date)->format('d M H:00'));
-			$success = $successTrend->map(fn (TrendValue $v) => $v->aggregate);
-			$errors  = $errorTrend->map(fn (TrendValue $v) => $v->aggregate);
-		}
-
-		return [
-			'labels'   => $labels->toArray(),
-			'datasets' => [
-				[
-					'label' => 'Успешно',
-					'data'  => $success->toArray(),
-				],
-				[
-					'label' => 'Ошибки',
-					'data'  => $errors->toArray(),
-				],
-			],
-		];
-	}
+        return [
+            'labels'   => $labels->toArray(),
+            'datasets' => [
+                [
+                    'label'       => 'Успішні завантаження',
+                    'data'        => $ok->pluck('aggregate')->toArray(),
+                    'borderColor' => 'rgb(34,197,94)',
+                    'showLine'    => true,
+                ],
+                [
+                    'label'       => 'Помилки завантаження',
+                    'data'        => $bad->pluck('aggregate')->toArray(),
+                    'borderColor' => 'rgb(239,68,68)',
+                    'showLine'    => true,
+                ],
+            ],
+        ];
+    }
 }
