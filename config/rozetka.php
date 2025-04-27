@@ -28,6 +28,6 @@ return [
 	|  Формат: '10s', '30s', '1m' и т.д.
 	|------------------------------------------------------------------
 	*/
-	'dashboard_polling_interval' => env('DASHBOARD_POLLING_INTERVAL', '2s'),
+	'dashboard_polling_interval' => env('DASHBOARD_POLLING_INTERVAL', '5s'),
 
 ];

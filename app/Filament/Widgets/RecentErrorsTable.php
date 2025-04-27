@@ -8,6 +8,8 @@ use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
 use App\Models\ParseError;
 
+use App\Tables\Columns\{CreatedAt, ErrorTitle};
+
 class RecentErrorsTable extends BaseWidget implements Tables\Contracts\HasTable
 {
     use Tables\Concerns\InteractsWithTable;
@@ -19,19 +21,12 @@ class RecentErrorsTable extends BaseWidget implements Tables\Contracts\HasTable
     {
         return $table
             ->columns([
-TextColumn::make('link.url')
-	->label('URL')
-	->limit(50)->wrap()
-	->url('link.url', true)
-	->icon('heroicon-m-arrow-top-right-on-square')
-	->sortable(),
 
-                TextColumn::make('message')->label('Помилка')->wrap()->limit(120),
+				ErrorTitle::make(),
 
-                TextColumn::make('created_at')
-                    ->label('Час')
-                    ->since()
-                    ->sortable(),
+                TextColumn::make('message')->label('Помилка')->wrap()->limit(200),
+
+				CreatedAt::make(),
             ])
             ->defaultSort('created_at', 'desc')
             ->poll(config('rozetka.dashboard_polling_interval'))

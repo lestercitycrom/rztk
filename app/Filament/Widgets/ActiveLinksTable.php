@@ -26,14 +26,14 @@ class ActiveLinksTable extends BaseWidget implements Tables\Contracts\HasTable
                     ->url('url', true)->icon('heroicon-m-arrow-top-right-on-square')
                     ->sortable(),
 
-BadgeColumn::make('type')
-	->label('Тип')
-	->colors([
-		'success' => 'vendor',
-		'warning' => 'category',
-	])
-	->formatStateUsing(fn (string $state) => $state === 'vendor' ? 'продавець' : 'категорія')
-	->sortable(),
+				BadgeColumn::make('type')
+					->label('Тип')
+					->colors([
+						'success' => 'vendor',
+						'warning' => 'category',
+					])
+				->formatStateUsing(fn (string $state) => $state === 'vendor' ? 'продавець' : 'категорія')
+				->sortable(),
 
                 TextColumn::make('total_pages')->label('Сторінок')->sortable(),
                 TextColumn::make('last_parsed_page')->label('Остання сторінка')->sortable(),
@@ -43,24 +43,15 @@ BadgeColumn::make('type')
                     ->since()
                     ->sortable(),
 
-BadgeColumn::make('status')
-	->label('Статус')
-	->colors([
-		'success' => 'active',
-		'warning' => 'pending',
-		'danger'  => 'error',
-	])
-	->formatStateUsing(fn (string $state) => match ($state) {
-		'active'  => 'активне',
-		'pending' => 'очікує',
-		'error'   => 'помилка',
-		default   => $state,
-	})
-	->sortable(),
-            ])
-            ->defaultSort('updated_at', 'desc')
-            ->poll(config('rozetka.dashboard_polling_interval'))
-            ->paginated([10, 25, 50])
-            ->query(ParseLink::where('is_active', true));
-    }
+				BadgeColumn::make('status')
+					->label('Статус')
+					->colors(['success'=>'success','danger'=>'danger'])	
+
+					->sortable(),
+							])
+							->defaultSort('updated_at', 'desc')
+							->poll(config('rozetka.dashboard_polling_interval'))
+							->paginated([10, 25, 50])
+							->query(ParseLink::where('is_active', true));
+					}
 }
