@@ -43,6 +43,10 @@ class AdminPanelProvider extends PanelProvider
 			->colors(['primary' => Color::Amber])
 			->login()
 			->profile()
+			->userMenuItems([
+				'profile' => \Filament\Navigation\MenuItem::make()
+					->icon('heroicon-o-user-circle') 
+			])
 			->discoverResources(
 				app_path('Filament/Resources'),
 				'App\\Filament\\Resources'
@@ -74,25 +78,6 @@ class AdminPanelProvider extends PanelProvider
 			])
 			->unsavedChangesAlerts()
 			->spa()
-			->topNavigation()                            // use top nav
-			
-			/*
-            ->navigation(function (NavigationBuilder $builder): NavigationBuilder {
-                return $builder->items([
-                    NavigationItem::make('Главная')
-                        ->icon('heroicon-o-home')
-                        ->isActiveWhen(fn (): bool => request()->is('/'))
-                        ->url('/'),
-
-                  
-                    // Автоматически сгенерированные элементы
-                    ...\App\Filament\Pages\Dashboard::getNavigationItems(),
-					...\App\Filament\Pages\ParserSettings::getNavigationItems(),
-
-
-                ]);
-            });
-			*/
-			;			
+			->topNavigation();			
 	}
 }

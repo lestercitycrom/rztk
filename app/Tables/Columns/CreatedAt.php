@@ -11,7 +11,7 @@ class CreatedAt extends TextColumn
         parent::setUp();
 
         $this
-            ->label('Коли')
+            ->label('Створено')
             ->since() 
             ->sortable();
     }

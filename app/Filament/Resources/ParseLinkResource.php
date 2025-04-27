@@ -19,6 +19,8 @@ class ParseLinkResource extends Resource
 	protected static ?string $model = ParseLink::class;
 	protected static ?string $navigationIcon = 'heroicon-o-queue-list';
 
+
+
 	// navigation title
 	protected static ?string $navigationLabel = "Парсера";
 	// header

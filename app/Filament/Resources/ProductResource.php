@@ -6,52 +6,41 @@ use App\Filament\Resources\ProductResource\Pages;
 use App\Models\Product;
 use Filament\Resources\Resource;
 use Filament\Tables;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\{TextColumn, IconColumn};
+use App\Tables\Columns\{CreatedAt, ProductTitle};
 use Filament\Tables\Actions\Action;
 
 class ProductResource extends Resource
 {
     protected static ?string $model = Product::class;
-    protected static ?string $navigationGroup = 'Каталог';
     protected static ?string $navigationLabel = 'Товари';
+	protected static ?string $modelLabel = "Товар";
+	protected static ?string $pluralModelLabel = "Товари";	
+	protected static ?string $navigationIcon = 'heroicon-o-shopping-bag';
 
     public static function table(Tables\Table $table): Tables\Table
     {
         return $table
             ->columns([
-                TextColumn::make('title')
-                    ->label('Назва')
-                    ->limit(50)
-                    ->searchable(),
+					ProductTitle::make(),
 
-                TextColumn::make('url')
-                    ->label('URL')
-                    ->url(fn (Product $record): string => $record->url)
-                    ->icon('heroicon-o-link')
-                    ->openUrlInNewTab(),
+					TextColumn::make('category_id')
+						->label('Категорія')
+						->formatStateUsing(fn (mixed $state, Product $record): string => 
+							"c{$record->category_id} – {$record->category?->title}"
+						)->sortable(),
 
-                TextColumn::make('category_id')
-                    ->label('Категорія')
-                    ->formatStateUsing(fn (mixed $state, Product $record): string => 
-                        "c{$record->category_id} – {$record->category?->title}"
-                    ),
+					TextColumn::make('price')
+						->label('Ціна')
+						->money('UAH', true)->sortable(),
 
-                TextColumn::make('price')
-                    ->label('Ціна')
-                    ->money('UAH', true),
+					TextColumn::make('old_price')
+						->label('Стара ціна')
+						->money('UAH', true)->sortable(),
 
-                TextColumn::make('old_price')
-                    ->label('Стара ціна')
-                    ->money('UAH', true),
+					CreatedAt::make('created_at'),
 
-                TextColumn::make('created_at')
-                    ->label('Створено')
-                    ->dateTime(),
-
-                TextColumn::make('updated_at')
-                    ->label('Оновлено')
-                    ->dateTime(),
+					CreatedAt::make('updated_at')->label('Оновлено')
             ])
             ->actions([
                 Action::make('view')
